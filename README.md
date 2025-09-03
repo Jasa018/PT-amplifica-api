@@ -2,7 +2,7 @@
 
 Esta es una API de Laravel diseñada para servir como backend para integraciones con plataformas de e-commerce como Shopify y WooCommerce.
 
-El proyecto está configurado para ejecutarse en un entorno de Docker gestionado por Laravel Sail.
+El proyecto está configurado para ejecutarse en un entorno de Docker.
 
 ## Prerrequisitos
 
@@ -22,43 +22,51 @@ Asegúrate de que Docker Desktop esté instalado y en ejecución en tu sistema a
     Este comando descargará las imágenes de Docker necesarias, construirá los contenedores y los iniciará en segundo plano.
 
     ```bash
-    ./vendor/bin/sail up -d
+    docker-compose up -d
     ```
-    *(En Windows, puedes ejecutar `vendor\bin\sail up -d`)*
 
 3.  **Ejecutar las migraciones de la base de datos:**
     La primera vez que inicies el entorno, necesitarás crear la estructura de la base de datos ejecutando las migraciones de Laravel.
 
     ```bash
-    ./vendor/bin/sail artisan migrate
+    docker-compose exec laravel.test php artisan migrate
     ```
 
 ¡Y eso es todo! La API ahora estará disponible en `http://localhost`.
 
-## Comandos Útiles de Sail
+## Comandos Útiles de Docker Compose
 
--   **Iniciar el entorno:** `./vendor/bin/sail up -d`
--   **Detener el entorno:** `./vendor/bin/sail down`
--   **Ejecutar comandos de Artisan:** `./vendor/bin/sail artisan <command>`
--   **Ejecutar Composer:** `./vendor/bin/sail composer <command>`
--   **Ejecutar NPM:** `./vendor/bin/sail npm <command>`
--   **Abrir una terminal en el contenedor de la aplicación:** `./vendor/bin/sail shell`
+-   **Iniciar el entorno:** `docker-compose up -d`
+-   **Detener el entorno:** `docker-compose down`
+-   **Ejecutar comandos de Artisan:** `docker-compose exec laravel.test php artisan <command>`
+-   **Ejecutar Composer:** `docker-compose exec laravel.test composer <command>`
+-   **Ejecutar NPM:** `docker-compose exec laravel.test npm <command>`
+-   **Abrir una terminal en el contenedor de la aplicación:** `docker-compose exec laravel.test bash`
 
-## Configuración de la Base de Datos
+## Endpoints de la API
 
-El entorno de Sail incluye un contenedor de MySQL. La configuración por defecto es:
+La API proporciona los siguientes endpoints:
 
--   **Host:** `mysql`
--   **Puerto:** `3306`
--   **Base de datos:** `laravel`
--   **Usuario:** `sail`
--   **Contraseña:** `password`
+- `GET /api/stores` - Lista todas las tiendas.
+- `POST /api/stores` - Crea una nueva tienda.
+- `GET /api/stores/{store}` - Muestra una tienda específica.
+- `PUT /api/stores/{store}` - Actualiza una tienda específica.
+- `DELETE /api/stores/{store}` - Elimina una tienda específica.
 
-Puedes conectarte a la base de datos desde tu cliente de SQL preferido usando el puerto `3306` en `localhost`.
+- `GET /api/products` - Lista todos los productos.
+- `POST /api/products` - Crea un nuevo producto.
+- `GET /api/products/{product}` - Muestra un producto específico.
+- `PUT /api/products/{product}` - Actualiza un producto específico.
+- `DELETE /api/products/{product}` - Elimina un producto específico.
+
+- `GET /api/orders` - Lista todas las órdenes.
+- `POST /api/orders` - Crea una nueva orden.
+- `GET /api/orders/{order}` - Muestra una orden específica.
+- `PUT /api/orders/{order}` - Actualiza una orden específica.
+- `DELETE /api/orders/{order}` - Elimina una orden específica.
 
 ## Próximos Pasos
 
--   Crear las migraciones para las tablas personalizadas (`stores`, `products`, `orders`, etc.).
--   Crear los Modelos de Eloquent para cada tabla.
--   Desarrollar los controladores y rutas de la API.
 -   Implementar la lógica de integración con Shopify y WooCommerce.
+-   Añadir autenticación y autorización a los endpoints de la API.
+-   Escribir tests para la API.
