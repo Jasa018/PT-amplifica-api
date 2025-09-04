@@ -32,6 +32,10 @@ use OpenApi\Annotations as OA;
  *     scheme="bearer",
  *     bearerFormat="JWT"
  * )
+ *
+ * @OA\Security(
+ *     security={{"bearerAuth":{}}}
+ * )
  */
 class Controller extends BaseController
 {

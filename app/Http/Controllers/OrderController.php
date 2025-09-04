@@ -13,6 +13,7 @@ class OrderController extends Controller
      *     path="/api/orders",
      *     summary="Get all orders",
      *     tags={"Orders"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
@@ -33,6 +34,7 @@ class OrderController extends Controller
      *     path="/api/orders",
      *     summary="Create a new order",
      *     tags={"Orders"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(ref="#/components/schemas/Order")
@@ -76,6 +78,7 @@ class OrderController extends Controller
      *     path="/api/orders/{order}",
      *     summary="Get a specific order",
      *     tags={"Orders"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="order",
      *         in="path",
@@ -104,6 +107,7 @@ class OrderController extends Controller
      *     path="/api/orders/{order}",
      *     summary="Update a specific order",
      *     tags={"Orders"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="order",
      *         in="path",
@@ -151,6 +155,7 @@ class OrderController extends Controller
      *     path="/api/orders/{order}",
      *     summary="Delete a specific order",
      *     tags={"Orders"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="order",
      *         in="path",

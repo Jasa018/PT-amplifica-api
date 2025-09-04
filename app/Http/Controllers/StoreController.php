@@ -13,6 +13,7 @@ class StoreController extends Controller
      *     path="/api/stores",
      *     summary="Get all stores",
      *     tags={"Stores"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
@@ -33,6 +34,7 @@ class StoreController extends Controller
      *     path="/api/stores",
      *     summary="Create a new store",
      *     tags={"Stores"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(ref="#/components/schemas/Store")
@@ -67,6 +69,7 @@ class StoreController extends Controller
      *     path="/api/stores/{store}",
      *     summary="Get a specific store",
      *     tags={"Stores"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="store",
      *         in="path",
@@ -95,6 +98,7 @@ class StoreController extends Controller
      *     path="/api/stores/{store}",
      *     summary="Update a specific store",
      *     tags={"Stores"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="store",
      *         in="path",
@@ -142,6 +146,7 @@ class StoreController extends Controller
      *     path="/api/stores/{store}",
      *     summary="Delete a specific store",
      *     tags={"Stores"},
+     *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(
      *         name="store",
      *         in="path",
