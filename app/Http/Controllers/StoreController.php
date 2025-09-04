@@ -4,11 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Store;
 use Illuminate\Http\Request;
+use OpenApi\Annotations as OA;
 
 class StoreController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * @OA\Get(
+     *     path="/api/stores",
+     *     summary="Get all stores",
+     *     tags={"Stores"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful operation",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(ref="#/components/schemas/Store")
+     *         )
+     *     )
+     * )
      */
     public function index()
     {
@@ -16,13 +29,30 @@ class StoreController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * @OA\Post(
+     *     path="/api/stores",
+     *     summary="Create a new store",
+     *     tags={"Stores"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Store")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Store created successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Store")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
      */
     public function store(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'platform' => 'required|in:shopify,woocommerce',
+            'platform' => 'required|string',
             'store_url' => 'required|url',
             'api_key' => 'nullable|string',
             'api_secret' => 'nullable|string',
@@ -33,7 +63,27 @@ class StoreController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * @OA\Get(
+     *     path="/api/stores/{store}",
+     *     summary="Get a specific store",
+     *     tags={"Stores"},
+     *     @OA\Parameter(
+     *         name="store",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the store to retrieve",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful operation",
+     *         @OA\JsonContent(ref="#/components/schemas/Store")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Store not found"
+     *     )
+     * )
      */
     public function show(Store $store)
     {
@@ -41,13 +91,41 @@ class StoreController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * @OA\Put(
+     *     path="/api/stores/{store}",
+     *     summary="Update a specific store",
+     *     tags={"Stores"},
+     *     @OA\Parameter(
+     *         name="store",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the store to update",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/Store")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Store updated successfully",
+     *         @OA\JsonContent(ref="#/components/schemas/Store")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Store not found"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
      */
     public function update(Request $request, Store $store)
     {
         $request->validate([
             'user_id' => 'sometimes|required|exists:users,id',
-            'platform' => 'sometimes|required|in:shopify,woocommerce',
+            'platform' => 'sometimes|required|string',
             'store_url' => 'sometimes|required|url',
             'api_key' => 'nullable|string',
             'api_secret' => 'nullable|string',
@@ -60,7 +138,26 @@ class StoreController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * @OA\Delete(
+     *     path="/api/stores/{store}",
+     *     summary="Delete a specific store",
+     *     tags={"Stores"},
+     *     @OA\Parameter(
+     *         name="store",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the store to delete",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="Store deleted successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Store not found"
+     *     )
+     * )
      */
     public function destroy(Store $store)
     {
@@ -69,3 +166,4 @@ class StoreController extends Controller
         return response()->noContent();
     }
 }
+
