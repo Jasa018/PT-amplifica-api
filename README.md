@@ -161,3 +161,13 @@ A continuación se listan los endpoints disponibles en la API.
 | `GET` | `/api/woocommerce/orders` | Obtiene los pedidos de los últimos 30 días en JSON. | No |
 | `GET` | `/api/woocommerce/products/export` | Descarga un archivo CSV con la lista de productos. | No |
 | `GET` | `/api/woocommerce/orders/export` | Descarga un archivo CSV con los pedidos recientes. | No |
+
+## Tareas Pendientes y Mejoras Futuras
+
+Debido a limitaciones de tiempo, las siguientes tareas y mejoras no pudieron ser completadas en su totalidad:
+
+*   **Pruebas Unitarias y de Integración:** Se recomienda ampliar la cobertura de pruebas para asegurar la robustez de la aplicación, incluyendo casos de borde y flujos complejos.
+*   **Funcionalidad de Ping en Tabla de Tiendas:** Aunque se implementó la base para la verificación de conectividad de las tiendas, se podría mejorar la visualización en el frontend y la robustez de la verificación.
+*   **Pruebas de Flujo del Sistema:** Realizar pruebas exhaustivas de los flujos completos del sistema (creación/actualización de tiendas, sincronización de productos/pedidos, etc.) para garantizar su correcto funcionamiento en diferentes escenarios.
+*   **Revisión y Mejora de Validaciones:** Revisar y fortalecer las validaciones de entrada de datos en todos los endpoints para prevenir datos inconsistentes o maliciosos.
+*   **Sistema de Logs:** Aunque se implementó una tabla de logs, se podría mejorar la gestión de logs, incluyendo la configuración de niveles de log más detallados, rotación de logs y posibles integraciones con sistemas de monitoreo.
