@@ -140,6 +140,61 @@
                 ]
             }
         },
+        "/api/logs": {
+            "get": {
+                "tags": [
+                    "Logs"
+                ],
+                "summary": "Get application logs",
+                "operationId": "07258c00ce1b2cbc7c7151a7cc8ca986",
+                "parameters": [
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "description": "Filter logs by level (info, warning, error)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "store_id",
+                        "in": "query",
+                        "description": "Filter logs by store ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search logs by message or context",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Log"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/orders": {
             "get": {
                 "tags": [
@@ -895,6 +950,55 @@
     },
     "components": {
         "schemas": {
+            "Log": {
+                "title": "Log",
+                "description": "Log model",
+                "properties": {
+                    "id": {
+                        "description": "Log ID",
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "store_id": {
+                        "description": "ID of the associated store (if applicable)",
+                        "type": "integer",
+                        "format": "int64",
+                        "nullable": true
+                    },
+                    "level": {
+                        "description": "Log level",
+                        "type": "string",
+                        "enum": [
+                            "info",
+                            "warning",
+                            "error"
+                        ]
+                    },
+                    "message": {
+                        "description": "Log message",
+                        "type": "string"
+                    },
+                    "context": {
+                        "description": "Additional context data (JSON string)",
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "description": "Timestamp of log creation",
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "description": "Timestamp of last update",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object",
+                "xml": {
+                    "name": "Log"
+                }
+            },
             "Order": {
                 "title": "Order",
                 "description": "Order model",
@@ -1088,6 +1192,15 @@
                         "description": "Access Token for the store (sensitive, handle with care)",
                         "type": "string"
                     },
+                    "is_deleted": {
+                        "description": "Flag indicating if the store is soft deleted",
+                        "type": "boolean"
+                    },
+                    "deleted_at": {
+                        "description": "Timestamp of soft deletion",
+                        "type": "string",
+                        "format": "date-time"
+                    },
                     "created_at": {
                         "description": "Timestamp of store creation",
                         "type": "string",
@@ -1153,6 +1266,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Logs",
+            "description": "API Endpoints for Application Logs"
+        },
         {
             "name": "Authentication",
             "description": "Authentication"

@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ShopifyController;
 use App\Http\Controllers\WooCommerceController;
+use App\Http\Controllers\LogController;
 
 // Authentication Routes
 Route::post('login', [AuthController::class, 'login']);
@@ -36,4 +37,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('products', ProductController::class);
     Route::apiResource('orders', OrderController::class);
     Route::apiResource('users', UserController::class);
+    Route::get('logs', [LogController::class, 'index']);
 });

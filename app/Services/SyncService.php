@@ -52,7 +52,7 @@ class SyncService
                     }
                 }
             } catch (\Exception $e) {
-                Log::error("Failed to synchronize products for store {$store->name}: " . $e->getMessage());
+                Log::error("Failed to synchronize products for store {$store->name}: " . $e->getMessage(), ['store_id' => $store->id]);
             }
         }
     }
@@ -85,7 +85,7 @@ class SyncService
                     }
                 }
             } catch (\Exception $e) {
-                Log::error("Failed to synchronize orders for store {$store->name}: " . $e->getMessage());
+                Log::error("Failed to synchronize orders for store {$store->name}: " . $e->getMessage(), ['store_id' => $store->id]);
             }
         }
     }
@@ -110,7 +110,7 @@ class SyncService
     {
         $client = $this->getWooCommerceClient($store);
         if (!$client) {
-            Log::error("Could not initialize WooCommerce client for store: {$store->name}");
+            Log::error("Could not initialize WooCommerce client for store: {$store->name}", ['store_id' => $store->id]);
             return;
         }
         $this->syncWooCommerceProducts($store, $client);
@@ -132,7 +132,7 @@ class SyncService
             ]);
 
             if ($response->failed()) {
-                Log::error("Shopify API product sync failed for store {$store->name}.", $response->json());
+                Log::error("Shopify API product sync failed for store {$store->name}.", array_merge($response->json(), ['store_id' => $store->id]));
                 return;
             }
 
@@ -156,7 +156,7 @@ class SyncService
             Log::info("Shopify products synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error("Shopify product sync error for store {$store->name}: " . $e->getMessage());
+            Log::error("Shopify product sync error for store {$store->name}: " . $e->getMessage(), ['store_id' => $store->id]);
         }
     }
 
@@ -180,7 +180,7 @@ class SyncService
             ]);
 
             if ($response->failed()) {
-                Log::error("Shopify API order sync failed for store {$store->name}.", $response->json());
+                Log::error("Shopify API order sync failed for store {$store->name}.", array_merge($response->json(), ['store_id' => $store->id]));
                 return;
             }
 
@@ -218,7 +218,7 @@ class SyncService
             Log::info("Shopify orders synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error("Shopify order sync error for store {$store->name}: " . $e->getMessage());
+            Log::error("Shopify order sync error for store {$store->name}: " . $e->getMessage(), ['store_id' => $store->id]);
         }
     }
 
@@ -250,7 +250,7 @@ class SyncService
             Log::info("WooCommerce products synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error("WooCommerce product sync error for store {$store->name}: " . $e->getMessage());
+            Log::error("WooCommerce product sync error for store {$store->name}: " . $e->getMessage(), ['store_id' => $store->id]);
         }
     }
 
@@ -299,7 +299,7 @@ class SyncService
             Log::info("WooCommerce orders synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error("WooCommerce order sync error for store {$store->name}: " . $e->getMessage());
+            Log::error("WooCommerce order sync error for store {$store->name}: " . $e->getMessage(), ['store_id' => $store->id]);
         }
     }
 
@@ -312,7 +312,7 @@ class SyncService
     private function getWooCommerceClient(Store $store)
     {
         if (!$store->store_url || !$store->api_key || !$store->api_secret) {
-            Log::error("WooCommerce credentials missing for store: {$store->name}");
+            Log::error("WooCommerce credentials missing for store: {$store->name}", ['store_id' => $store->id]);
             return null;
         }
 
