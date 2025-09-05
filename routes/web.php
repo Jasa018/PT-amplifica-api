@@ -20,6 +20,12 @@ Route::post('logout', [WebAuthController::class, 'logout'])->name('logout');
 // Protected routes
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Product routes
     Route::get('/products', [WebProductController::class, 'index'])->name('products.index');
+    Route::get('/products/export', [WebProductController::class, 'exportCsv'])->name('products.export');
+
+    // Order routes
     Route::get('/orders', [WebOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/export', [WebOrderController::class, 'exportCsv'])->name('orders.export');
 });

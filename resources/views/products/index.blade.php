@@ -4,7 +4,10 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Products</h1>
-        <a href="{{ route('products.index') }}" class="btn btn-primary">Sync Products</a>
+        <div>
+            <a href="{{ route('products.index') }}" class="btn btn-primary me-2">Sync Products</a>
+            <a href="{{ route('products.export') }}" class="btn btn-success">Export to CSV</a>
+        </div>
     </div>
 
     <div class="card">
