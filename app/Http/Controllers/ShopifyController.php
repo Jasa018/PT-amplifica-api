@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Models\Product;
+use App\Models\Order;
+use App\Services\SyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -10,9 +13,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ShopifyController extends Controller
 {
-    /**
-     * Redirects the user to the Shopify authorization page.
-     */
     public function install(Request $request)
     {
         $request->validate([
@@ -29,9 +29,6 @@ class ShopifyController extends Controller
         return redirect($authUrl);
     }
 
-    /**
-     * Handles the callback from Shopify after authorization.
-     */
     public function callback(Request $request)
     {
         $request->validate([
@@ -78,14 +75,11 @@ class ShopifyController extends Controller
                 ['store_url' => $shop, 'platform' => 'shopify'],
                 [
                     'access_token' => encrypt($accessToken),
-                    // You might want to associate this with the logged-in user
-                    // 'user_id' => auth()->id() ?? 1, // Example: replace with actual user ID
                 ]
             );
 
             Log::info("Successfully installed on shop: {$shop}");
 
-            // You can redirect the user to your app's frontend
             return response()->json([
                 'message' => 'Shopify app installed successfully!',
                 'store' => $store,
@@ -97,44 +91,54 @@ class ShopifyController extends Controller
         }
     }
 
-    /**
-     * Makes a test request to the Shopify API to fetch products.
-     */
-    public function testApi(Request $request)
+    public function testApi(Request $request, SyncService $syncService)
     {
-        $products = $this->getProducts();
+        $syncService->syncShopifyProducts();
 
-        if ($products instanceof \Illuminate\Http\JsonResponse) {
-            return $products; // Return error response if something went wrong
+        $storeUrl = config('services.shopify.store_url');
+        $store = Store::where('store_url', $storeUrl)->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found in local database.'], 404);
         }
+
+        $products = Product::where('store_id', $store->id)->get();
 
         return response()->json($products);
     }
 
-    /**
-     * Fetches recent orders from the Shopify API and returns as JSON.
-     */
-    public function getRecentOrders(Request $request)
+    public function getRecentOrders(Request $request, SyncService $syncService)
     {
-        $orders = $this->getOrders();
+        $syncService->syncShopifyOrders();
 
-        if ($orders instanceof \Illuminate\Http\JsonResponse) {
-            return $orders; // Return error response
+        $storeUrl = config('services.shopify.store_url');
+        $store = Store::where('store_url', $storeUrl)->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found in local database.'], 404);
         }
+
+        $orders = Order::with('items')
+            ->where('store_id', $store->id)
+            ->where('order_date', '>=', now()->subDays(30))
+            ->latest('order_date')
+            ->get();
 
         return response()->json($orders);
     }
 
-    /**
-     * Exports products to a CSV file.
-     */
-    public function exportProductsCsv()
+    public function exportProductsCsv(SyncService $syncService)
     {
-        $products = $this->getProducts();
+        $syncService->syncShopifyProducts();
 
-        if ($products instanceof \Illuminate\Http\JsonResponse) {
-            return $products; // Return error response
+        $storeUrl = config('services.shopify.store_url');
+        $store = Store::where('store_url', $storeUrl)->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found, cannot export.'], 404);
         }
+
+        $products = Product::where('store_id', $store->id)->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -144,12 +148,12 @@ class ShopifyController extends Controller
         $callback = function () use ($products) {
             $file = fopen('php://output', 'w');
             fputcsv($file, ['Name', 'SKU', 'Price', 'Image URL']);
-            foreach ($products['products'] as $product) {
+            foreach ($products as $product) {
                 fputcsv($file, [
-                    $product['title'],
-                    $product['variants'][0]['sku'] ?? 'N/A',
-                    $product['variants'][0]['price'] ?? '0.00',
-                    $product['image']['src'] ?? 'N/A',
+                    $product->name,
+                    $product->sku ?? 'N/A',
+                    $product->price ?? '0.00',
+                    $product->image_url ?? 'N/A',
                 ]);
             }
             fclose($file);
@@ -158,16 +162,22 @@ class ShopifyController extends Controller
         return new StreamedResponse($callback, 200, $headers);
     }
 
-    /**
-     * Exports recent orders to a CSV file.
-     */
-    public function exportOrdersCsv()
+    public function exportOrdersCsv(SyncService $syncService)
     {
-        $orders = $this->getOrders();
+        $syncService->syncShopifyOrders();
 
-        if ($orders instanceof \Illuminate\Http\JsonResponse) {
-            return $orders; // Return error response
+        $storeUrl = config('services.shopify.store_url');
+        $store = Store::where('store_url', $storeUrl)->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found, cannot export.'], 404);
         }
+
+        $orders = Order::with('items')
+            ->where('store_id', $store->id)
+            ->where('order_date', '>=', now()->subDays(30))
+            ->latest('order_date')
+            ->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -176,93 +186,24 @@ class ShopifyController extends Controller
 
         $callback = function () use ($orders) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Order ID', 'Customer', 'Email', 'Date', 'Status', 'Total', 'Products (SKU)']);
-            foreach ($orders['orders'] as $order) {
-                $lineItems = array_map(function ($item) {
-                    return $item['sku'] ?? 'N/A';
-                }, $order['line_items']);
+            fputcsv($file, ['Order ID', 'Customer', 'Date', 'Status', 'Total', 'Products (Name x Qty)']);
+            foreach ($orders as $order) {
+                $lineItems = $order->items->map(function ($item) {
+                    return sprintf('%s x %d', $item->product_name, $item->quantity);
+                })->implode('; ');
 
                 fputcsv($file, [
-                    $order['id'],
-                    ($order['customer']['first_name'] ?? '' . ' ' . $order['customer']['last_name'] ?? ''),
-                    $order['email'] ?? 'N/A',
-                    $order['created_at'],
-                    $order['financial_status'],
-                    $order['total_price'],
-                    implode('; ', $lineItems),
+                    $order->platform_order_id,
+                    $order->customer_name,
+                    $order->order_date,
+                    $order->status,
+                    $order->total_amount,
+                    $lineItems,
                 ]);
             }
             fclose($file);
         };
 
         return new StreamedResponse($callback, 200, $headers);
-    }
-
-    /**
-     * Private method to fetch all products.
-     */
-    private function getProducts()
-    {
-        $token = config('services.shopify.admin_access_token');
-        $storeUrl = config('services.shopify.store_url');
-
-        if (!$token || !$storeUrl) {
-            return response()->json(['message' => 'Shopify token or store URL is not configured.'], 400);
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'X-Shopify-Access-Token' => $token,
-            ])->get("https://{$storeUrl}/admin/api/2023-10/products.json", [
-                'limit' => 250, // Max limit
-            ]);
-
-            if ($response->failed()) {
-                Log::error('Shopify API test failed.', $response->json());
-                return response()->json(['message' => 'Failed to fetch data from Shopify API.', 'details' => $response->json()], $response->status());
-            }
-
-            return $response->json();
-
-        } catch (\Exception $e) {
-            Log::error('Shopify API test error: ' . $e->getMessage());
-            return response()->json(['message' => 'An unexpected error occurred during the API test.'], 500);
-        }
-    }
-
-    /**
-     * Private method to fetch recent orders.
-     */
-    private function getOrders()
-    {
-        $token = config('services.shopify.admin_access_token');
-        $storeUrl = config('services.shopify.store_url');
-
-        if (!$token || !$storeUrl) {
-            return response()->json(['message' => 'Shopify token or store URL is not configured.'], 400);
-        }
-
-        $dateFrom = now()->subDays(30)->toIso8601String();
-
-        try {
-            $response = Http::withHeaders([
-                'X-Shopify-Access-Token' => $token,
-            ])->get("https://{$storeUrl}/admin/api/2023-10/orders.json", [
-                'status' => 'any',
-                'created_at_min' => $dateFrom,
-                'limit' => 250,
-            ]);
-
-            if ($response->failed()) {
-                Log::error('Shopify API failed to get orders.', $response->json());
-                return response()->json(['message' => 'Failed to fetch orders from Shopify API.', 'details' => $response->json()], $response->status());
-            }
-
-            return $response->json();
-
-        } catch (\Exception $e) {
-            Log::error('Shopify get orders error: ' . $e->getMessage());
-            return response()->json(['message' => 'An unexpected error occurred while fetching orders.'], 500);
-        }
     }
 }

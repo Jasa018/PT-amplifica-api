@@ -2,57 +2,63 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Store;
+use App\Services\SyncService;
 use Illuminate\Http\Request;
-use Automattic\WooCommerce\Client;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WooCommerceController extends Controller
 {
-    private function getClient()
+    public function getProducts(Request $request, SyncService $syncService)
     {
+        $syncService->syncWooCommerceProducts();
+
         $storeUrl = config('services.woocommerce.store_url');
-        $consumerKey = config('services.woocommerce.consumer_key');
-        $consumerSecret = config('services.woocommerce.consumer_secret');
+        $store = Store::where('store_url', $storeUrl)->where('platform', 'woocommerce')->first();
 
-        if (!$storeUrl || !$consumerKey || !$consumerSecret) {
-            return null;
+        if (!$store) {
+            return response()->json(['message' => 'Store not found in local database.'], 404);
         }
 
-        return new Client(
-            $storeUrl,
-            $consumerKey,
-            $consumerSecret,
-            [
-                'version' => 'wc/v3',
-            ]
-        );
-    }
+        $products = Product::where('store_id', $store->id)->get();
 
-    public function getProducts(Request $request)
-    {
-        $products = $this->fetchProducts();
-        if ($products instanceof \Illuminate\Http\JsonResponse) {
-            return $products;
-        }
         return response()->json($products);
     }
 
-    public function getRecentOrders(Request $request)
+    public function getRecentOrders(Request $request, SyncService $syncService)
     {
-        $orders = $this->fetchRecentOrders();
-        if ($orders instanceof \Illuminate\Http\JsonResponse) {
-            return $orders;
+        $syncService->syncWooCommerceOrders();
+
+        $storeUrl = config('services.woocommerce.store_url');
+        $store = Store::where('store_url', $storeUrl)->where('platform', 'woocommerce')->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found in local database.'], 404);
         }
+
+        $orders = Order::with('items')
+            ->where('store_id', $store->id)
+            ->where('order_date', '>=', now()->subDays(30))
+            ->latest('order_date')
+            ->get();
+
         return response()->json($orders);
     }
 
-    public function exportProductsCsv()
+    public function exportProductsCsv(SyncService $syncService)
     {
-        $products = $this->fetchProducts();
-        if ($products instanceof \Illuminate\Http\JsonResponse) {
-            return $products;
+        $syncService->syncWooCommerceProducts();
+
+        $storeUrl = config('services.woocommerce.store_url');
+        $store = Store::where('store_url', $storeUrl)->where('platform', 'woocommerce')->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found, cannot export.'], 404);
         }
+
+        $products = Product::where('store_id', $store->id)->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -67,7 +73,7 @@ class WooCommerceController extends Controller
                     $product->name,
                     $product->sku ?? 'N/A',
                     $product->price ?? '0.00',
-                    $product->images[0]->src ?? 'N/A',
+                    $product->image_url ?? 'N/A',
                 ]);
             }
             fclose($file);
@@ -76,12 +82,22 @@ class WooCommerceController extends Controller
         return new StreamedResponse($callback, 200, $headers);
     }
 
-    public function exportOrdersCsv()
+    public function exportOrdersCsv(SyncService $syncService)
     {
-        $orders = $this->fetchRecentOrders();
-        if ($orders instanceof \Illuminate\Http\JsonResponse) {
-            return $orders;
+        $syncService->syncWooCommerceOrders();
+
+        $storeUrl = config('services.woocommerce.store_url');
+        $store = Store::where('store_url', $storeUrl)->where('platform', 'woocommerce')->first();
+
+        if (!$store) {
+            return response()->json(['message' => 'Store not found, cannot export.'], 404);
         }
+
+        $orders = Order::with('items')
+            ->where('store_id', $store->id)
+            ->where('order_date', '>=', now()->subDays(30))
+            ->latest('order_date')
+            ->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -90,57 +106,24 @@ class WooCommerceController extends Controller
 
         $callback = function () use ($orders) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Order ID', 'Customer', 'Email', 'Date', 'Status', 'Total', 'Products (Name)']);
+            fputcsv($file, ['Order ID', 'Customer', 'Date', 'Status', 'Total', 'Products (Name x Qty)']);
             foreach ($orders as $order) {
-                $lineItems = array_map(function ($item) {
-                    return $item->name;
-                }, $order->line_items);
+                $lineItems = $order->items->map(function ($item) {
+                    return sprintf('%s x %d', $item->product_name, $item->quantity);
+                })->implode('; ');
 
                 fputcsv($file, [
-                    $order->id,
-                    ($order->billing->first_name ?? '') . ' ' . ($order->billing->last_name ?? ''),
-                    $order->billing->email ?? 'N/A',
-                    $order->date_created,
+                    $order->platform_order_id,
+                    $order->customer_name,
+                    $order->order_date,
                     $order->status,
-                    $order->total,
-                    implode('; ', $lineItems),
+                    $order->total_amount,
+                    $lineItems,
                 ]);
             }
             fclose($file);
         };
 
         return new StreamedResponse($callback, 200, $headers);
-    }
-
-    private function fetchProducts()
-    {
-        $woocommerce = $this->getClient();
-        if (!$woocommerce) {
-            return response()->json(['message' => 'WooCommerce service is not configured.'], 400);
-        }
-
-        try {
-            return $woocommerce->get('products');
-        } catch (\Exception $e) {
-            Log::error('WooCommerce API error fetching products: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to fetch products from WooCommerce.'], 500);
-        }
-    }
-
-    private function fetchRecentOrders()
-    {
-        $woocommerce = $this->getClient();
-        if (!$woocommerce) {
-            return response()->json(['message' => 'WooCommerce service is not configured.'], 400);
-        }
-
-        $dateFrom = now()->subDays(30)->toIso8601String();
-
-        try {
-            return $woocommerce->get('orders', ['after' => $dateFrom]);
-        } catch (\Exception $e) {
-            Log::error('WooCommerce API error fetching orders: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to fetch orders from WooCommerce.'], 500);
-        }
     }
 }
