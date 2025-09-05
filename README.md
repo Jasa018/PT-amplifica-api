@@ -1,106 +1,110 @@
-# Amplifica API
+# Amplifica - Prueba Técnica API
 
-Esta es una API de Laravel diseñada para servir como backend para integraciones con plataformas de e-commerce como Shopify y WooCommerce.
+Esta aplicación es una API desarrollada en Laravel que se conecta a tiendas de e-commerce (Shopify y WooCommerce) para obtener y gestionar datos de productos y pedidos.
 
-El proyecto está configurado para ejecutarse en un entorno de Docker.
+## Requisitos
 
-## Prerrequisitos
+- Docker
+- Composer
 
-- Docker Desktop
+## Instalación y Puesta en Marcha
 
-Asegúrate de que Docker Desktop esté instalado y en ejecución en tu sistema antes de continuar.
-
-## Instalación y Primer Uso
-
-1.  **Clonar el repositorio (si es necesario):**
+1.  **Clonar el Repositorio**
     ```bash
-    git clone <repository-url>
+    git clone <url-del-repositorio>
     cd PT-amplifica-api
     ```
 
-2.  **Construir e iniciar los contenedores:**
-    Este comando descargará las imágenes de Docker necesarias, construirá los contenedores y los iniciará en segundo plano.
-
+2.  **Configuración del Entorno**
+    Copia el archivo de ejemplo de variables de entorno y ajústalo según sea necesario.
     ```bash
-    docker-compose up -d
+    cp .env.example .env
     ```
+    Asegúrate de llenar las variables de entorno como se describe en la sección de "Configuración".
 
-3.  **Instalar dependencias de Composer:**
-    Una vez que los contenedores estén en funcionamiento, instala las dependencias de PHP.
+3.  **Levantar los Contenedores**
+    Este proyecto usa Laravel Sail (Docker). Para iniciar los servicios (aplicación, base de datos), ejecuta:
+    ```bash
+    ./vendor/bin/sail up -d
+    ```
+    *(Si estás en Windows y no usas WSL, puedes usar `docker-compose up -d`)*
 
+4.  **Instalar Dependencias**
+    Instala las dependencias de PHP a través de Composer.
     ```bash
     docker-compose exec laravel.test composer install
     ```
 
-4.  **Ejecutar las migraciones de la base de datos:**
-    La primera vez que inicies el entorno, necesitarás crear la estructura de la base de datos ejecutando las migraciones de Laravel.
-
+5.  **Ejecutar Migraciones**
+    Crea la estructura de la base de datos ejecutando las migraciones de Laravel.
     ```bash
     docker-compose exec laravel.test php artisan migrate
     ```
 
-¡Y eso es todo! La API ahora estará disponible en `http://localhost`.
+6.  **Limpiar Caché (Importante)**
+    Después de configurar tus variables de entorno, limpia la caché de configuración para que la aplicación las cargue correctamente.
+    ```bash
+    docker-compose exec laravel.test php artisan config:clear
+    ```
 
-## Comandos Útiles de Docker Compose
+La aplicación ahora debería estar corriendo en `http://localhost`.
 
--   **Iniciar el entorno:** `docker-compose up -d`
--   **Detener el entorno:** `docker-compose down`
--   **Ejecutar comandos de Artisan:** `docker-compose exec laravel.test php artisan <command>`
--   **Ejecutar Composer:** `docker-compose exec laravel.test composer <command>`
--   **Ejecutar NPM:** `docker-compose exec laravel.test npm <command>`
--   **Abrir una terminal en el contenedor de la aplicación:** `docker-compose exec laravel.test bash`
+## Configuración (.env)
 
-## Endpoints de la API
+Debes configurar las siguientes variables en tu archivo `.env` para conectar las plataformas de e-commerce.
 
-La API proporciona los siguientes endpoints:
+### Shopify
 
-- `GET /api/stores` - Lista todas las tiendas.
-- `POST /api/stores` - Crea una nueva tienda.
-- `GET /api/stores/{store}` - Muestra una tienda específica.
-- `PUT /api/stores/{store}` - Actualiza una tienda específica.
-- `DELETE /api/stores/{store}` - Elimina una tienda específica.
+Las credenciales se obtienen creando una **Aplicación Personalizada (Custom App)** en el panel de administración de tu tienda Shopify.
 
-- `GET /api/products` - Lista todos los productos.
-- `POST /api/products` - Crea un nuevo producto.
-- `GET /api/products/{product}` - Muestra un producto específico.
-- `PUT /api/products/{product}` - Actualiza un producto específico.
-- `DELETE /api/products/{product}` - Elimina un producto específico.
+-   `SHOPIFY_STORE_URL`: La URL de tu tienda, sin `https://`. (Ej: `tu-tienda.myshopify.com`)
+-   `SHOPIFY_ADMIN_ACCESS_TOKEN`: El "Token de acceso de la API de admin" que te proporciona Shopify al configurar los permisos de la API.
 
-- `GET /api/orders` - Lista todas las órdenes.
-- `POST /api/orders` - Crea una nueva orden.
-- `GET /api/orders/{order}` - Muestra una orden específica.
-- `PUT /api/orders/{order}` - Actualiza una orden específica.
-- `DELETE /api/orders/{order}` - Elimina una orden específica.
+### WooCommerce
+
+Las credenciales se obtienen en tu panel de WordPress, en **WooCommerce > Ajustes > Avanzado > API REST**.
+
+-   `WOOCOMMERCE_STORE_URL`: La URL completa de tu sitio WordPress. (Ej: `https://tu-tienda.com`)
+-   `WOOCOMMERCE_CONSUMER_KEY`: La "Clave de cliente" generada por WooCommerce.
+-   `WOOCOMMERCE_CONSUMER_SECRET`: La "Clave secreta del cliente" generada por WooCommerce.
 
 ## Documentación de la API (Swagger)
 
-Para generar y visualizar la documentación interactiva de la API utilizando Swagger (OpenAPI), sigue estos pasos:
+Este proyecto utiliza [L5-Swagger](https://github.com/DarkaOnLine/L5-Swagger) para generar la documentación de la API en formato OpenAPI.
 
-1.  **Instalar el paquete `l5-swagger`:**
-    ```bash
-    docker-compose exec laravel.test composer require darkaonline/l5-swagger
-    ```
+Para generar o actualizar la documentación, ejecuta el siguiente comando:
+```bash
+docker-compose exec laravel.test php artisan l5-swagger:generate
+```
 
-2.  **Publicar la configuración y los assets de Swagger:**
-    Esto creará el archivo `config/l5-swagger.php` para personalización.
-    ```bash
-    docker-compose exec laravel.test php artisan vendor:publish --provider="L5Swagger\L5SwaggerServiceProvider"
-    ```
+Una vez generada y con el servidor en marcha, puedes acceder a la documentación interactiva en la siguiente URL:
+[http://localhost/api/documentation](http://localhost/api/documentation)
 
-3.  **Añadir anotaciones Swagger a tus controladores y modelos:**
-    `l5-swagger` utiliza anotaciones en el código PHP para construir la especificación OpenAPI. Asegúrate de añadir las anotaciones `@OA\Info` en un controlador base (ej. `app/Http/Controllers/Controller.php`) y `@OA\Schema` en tus modelos (ej. `app/Models/User.php`) para definir la estructura de tus datos y endpoints.
+## API Endpoints
 
-4.  **Generar la documentación de Swagger:**
-    ```bash
-    docker-compose exec laravel.test php artisan l5-swagger:generate
-    ```
+A continuación se listan los endpoints disponibles en la API.
 
-5.  **Acceder a la interfaz de usuario de Swagger:**
-    Una vez generada, la documentación estará disponible en tu navegador en:
-    `http://localhost/api/documentation`
+### Autenticación
 
-## Próximos Pasos
+| Método | URL | Descripción | Autenticación Requerida |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/login` | Inicia sesión con un usuario y devuelve un token. | No |
+| `POST` | `/api/logout`| Cierra la sesión y revoca el token actual. | Sí |
 
--   Implementar la lógica de integración con Shopify y WooCommerce.
--   Añadir autenticación y autorización a los endpoints de la API.
--   Escribir tests para la API.
+### Shopify
+
+| Método | URL | Descripción | Autenticación Requerida |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/shopify/test` | Obtiene una lista de productos en formato JSON. | No |
+| `GET` | `/api/shopify/orders` | Obtiene los pedidos de los últimos 30 días en JSON. | No |
+| `GET` | `/api/shopify/products/export` | Descarga un archivo CSV con la lista de productos. | No |
+| `GET` | `/api/shopify/orders/export` | Descarga un archivo CSV con los pedidos recientes. | No |
+
+### WooCommerce
+
+| Método | URL | Descripción | Autenticación Requerida |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/woocommerce/products` | Obtiene una lista de productos en formato JSON. | No |
+| `GET` | `/api/woocommerce/orders` | Obtiene los pedidos de los últimos 30 días en JSON. | No |
+| `GET` | `/api/woocommerce/products/export` | Descarga un archivo CSV con la lista de productos. | No |
+| `GET` | `/api/woocommerce/orders/export` | Descarga un archivo CSV con los pedidos recientes. | No |
