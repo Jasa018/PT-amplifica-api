@@ -11,17 +11,24 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ProductController extends Controller
 {
     /**
+     * Synchronize products from all stores.
+     *
+     * @param SyncService $syncService
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function sync(SyncService $syncService)
+    {
+        $syncService->syncAllProducts();
+        return redirect()->route('products.index')->with('success', 'Products are being synchronized.');
+    }
+    /**
      * Display a listing of the resource.
      *
      * @param SyncService $syncService
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request, SyncService $syncService)
+    public function index(Request $request)
     {
-        // Sync products from all platforms
-        $syncService->syncShopifyProducts();
-        $syncService->syncWooCommerceProducts();
-
         // Fetch all products from the local database
         $products = Product::with('store');
 
@@ -34,10 +41,10 @@ class ProductController extends Controller
             $products->where('sku', 'like', '%' . $request->input('sku') . '%');
         }
 
-        if ($request->filled('store_platform')) {
-            $platform = $request->input('store_platform');
-            $products->whereHas('store', function ($query) use ($platform) {
-                $query->where('platform', $platform);
+        if ($request->filled('store_name')) {
+            $storeName = $request->input('store_name');
+            $products->whereHas('store', function ($query) use ($storeName) {
+                $query->where('name', 'like', '%' . $storeName . '%');
             });
         }
 
@@ -52,12 +59,8 @@ class ProductController extends Controller
      * @param SyncService $syncService
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
-    public function exportCsv(SyncService $syncService)
+    public function exportCsv()
     {
-        // Ensure data is up-to-date before exporting
-        $syncService->syncShopifyProducts();
-        $syncService->syncWooCommerceProducts();
-
         $products = Product::with('store')->latest()->get();
 
         $headers = [
@@ -71,7 +74,7 @@ class ProductController extends Controller
             foreach ($products as $product) {
                 fputcsv($file, [
                     $product->id,
-                    $product->store->platform,
+                    $product->store->name, // Changed from platform to name
                     $product->platform_product_id,
                     $product->name,
                     $product->sku,

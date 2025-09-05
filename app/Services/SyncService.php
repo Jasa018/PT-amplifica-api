@@ -14,33 +14,125 @@ use Automattic\WooCommerce\Client;
 class SyncService
 {
     /**
-     * Synchronize products from Shopify API to the local database.
+     * Synchronize products and orders for all active stores.
      */
-    public function syncShopifyProducts()
+    public function syncAllStores()
     {
-        $token = config('services.shopify.admin_access_token');
-        $storeUrl = config('services.shopify.store_url');
+        Log::info('Starting synchronization for all active stores.');
+        $this->syncAllProducts();
+        $this->syncAllOrders();
+        Log::info('All active stores have been synchronized.');
+    }
 
-        if (!$token || !$storeUrl) {
-            Log::error('Shopify token or store URL is not configured for sync.');
-            return; // Or throw an exception
+    /**
+     * Synchronize products for all active stores.
+     */
+    public function syncAllProducts()
+    {
+        $stores = Store::all();
+        if ($stores->isEmpty()) {
+            Log::info('No active stores found to sync products from.');
+            return;
         }
 
-        // Find or create the store record to get its ID
-        $store = Store::firstOrCreate(
-            ['store_url' => $storeUrl, 'platform' => 'shopify'],
-            ['name' => 'Default Shopify Store'] // You might want a better name
-        );
+        foreach ($stores as $store) {
+            if (empty($store->name) || empty($store->platform)) {
+                Log::warning('Skipping a store for product sync due to missing name or platform.', ['store_id' => $store->id]);
+                continue;
+            }
 
+            Log::info("Synchronizing products for store: {$store->name} ({$store->platform})");
+            try {
+                if ($store->platform === 'shopify') {
+                    $this->syncShopifyProducts($store);
+                } elseif ($store->platform === 'woocommerce') {
+                    $client = $this->getWooCommerceClient($store);
+                    if ($client) {
+                        $this->syncWooCommerceProducts($store, $client);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to synchronize products for store {$store->name}: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Synchronize orders for all active stores.
+     */
+    public function syncAllOrders()
+    {
+        $stores = Store::all();
+        if ($stores->isEmpty()) {
+            Log::info('No active stores found to sync orders from.');
+            return;
+        }
+
+        foreach ($stores as $store) {
+            if (empty($store->name) || empty($store->platform)) {
+                Log::warning('Skipping a store for order sync due to missing name or platform.', ['store_id' => $store->id]);
+                continue;
+            }
+
+            Log::info("Synchronizing orders for store: {$store->name} ({$store->platform})");
+            try {
+                if ($store->platform === 'shopify') {
+                    $this->syncShopifyOrders($store);
+                } elseif ($store->platform === 'woocommerce') {
+                    $client = $this->getWooCommerceClient($store);
+                    if ($client) {
+                        $this->syncWooCommerceOrders($store, $client);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to synchronize orders for store {$store->name}: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Synchronize products and orders for a specific Shopify store.
+     *
+     * @param Store $store
+     */
+    public function syncShopifyStore(Store $store)
+    {
+        $this->syncShopifyProducts($store);
+        $this->syncShopifyOrders($store);
+    }
+
+    /**
+     * Synchronize products and orders for a specific WooCommerce store.
+     *
+     * @param Store $store
+     */
+    public function syncWooCommerceStore(Store $store)
+    {
+        $client = $this->getWooCommerceClient($store);
+        if (!$client) {
+            Log::error("Could not initialize WooCommerce client for store: {$store->name}");
+            return;
+        }
+        $this->syncWooCommerceProducts($store, $client);
+        $this->syncWooCommerceOrders($store, $client);
+    }
+
+    /**
+     * Synchronize products from Shopify API to the local database for a given store.
+     * @param Store $store
+     */
+    public function syncShopifyProducts(Store $store)
+    {
         try {
+            $host = preg_replace('#^https?://#', '', $store->store_url);
             $response = Http::withHeaders([
-                'X-Shopify-Access-Token' => $token,
-            ])->get("https://{$storeUrl}/admin/api/2023-10/products.json", [
+                'X-Shopify-Access-Token' => $store->access_token,
+            ])->get("https://{$host}/admin/api/2023-10/products.json", [
                 'limit' => 250,
             ]);
 
             if ($response->failed()) {
-                Log::error('Shopify API product sync failed.', $response->json());
+                Log::error("Shopify API product sync failed for store {$store->name}.", $response->json());
                 return;
             }
 
@@ -61,54 +153,40 @@ class SyncService
                 );
             }
 
-            Log::info('Shopify products synchronized successfully.');
+            Log::info("Shopify products synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error('Shopify product sync error: ' . $e->getMessage());
+            Log::error("Shopify product sync error for store {$store->name}: " . $e->getMessage());
         }
     }
 
     /**
-     * Synchronize orders from Shopify API to the local database.
+     * Synchronize orders from Shopify API to the local database for a given store.
+     * @param Store $store
      */
-    public function syncShopifyOrders()
+    public function syncShopifyOrders(Store $store)
     {
-        Log::debug('Starting Shopify order synchronization.');
-        $token = config('services.shopify.admin_access_token');
-        $storeUrl = config('services.shopify.store_url');
-
-        if (!$token || !$storeUrl) {
-            Log::error('Shopify token or store URL is not configured for sync.');
-            return;
-        }
-
-        $store = Store::firstOrCreate(
-            ['store_url' => $storeUrl, 'platform' => 'shopify'],
-            ['name' => 'Default Shopify Store']
-        );
-
         $dateFrom = now()->subDays(30)->toIso8601String();
-        Log::debug("Fetching Shopify orders from: {$dateFrom}");
+        Log::debug("Fetching Shopify orders for store {$store->name} from: {$dateFrom}");
 
         try {
+            $host = preg_replace('#^https?://#', '', $store->store_url);
             $response = Http::withHeaders([
-                'X-Shopify-Access-Token' => $token,
-            ])->get("https://{$storeUrl}/admin/api/2023-10/orders.json", [
+                'X-Shopify-Access-Token' => $store->access_token,
+            ])->get("https://{$host}/admin/api/2023-10/orders.json", [
                 'status' => 'any',
                 'created_at_min' => $dateFrom,
                 'limit' => 250,
             ]);
 
             if ($response->failed()) {
-                Log::error('Shopify API order sync failed.', $response->json());
+                Log::error("Shopify API order sync failed for store {$store->name}.", $response->json());
                 return;
             }
 
             $orders = $response->json('orders');
-            Log::debug('Shopify API response for orders:', ['count' => count($orders), 'data' => $orders]);
 
             foreach ($orders as $orderData) {
-                Log::debug("Processing Shopify order: {$orderData['id']} - {$orderData['financial_status']}");
                 $order = Order::updateOrCreate(
                     [
                         'store_id' => $store->id,
@@ -126,7 +204,7 @@ class SyncService
                     OrderItem::updateOrCreate(
                         [
                             'order_id' => $order->id,
-                            'platform_product_id' => $itemData['id'], // Using line item id as unique id for the item within the order
+                            'platform_product_id' => $itemData['id'],
                         ],
                         [
                             'product_name' => $itemData['name'],
@@ -137,31 +215,20 @@ class SyncService
                 }
             }
 
-            Log::info('Shopify orders synchronized successfully.');
+            Log::info("Shopify orders synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error('Shopify order sync error: ' . $e->getMessage());
+            Log::error("Shopify order sync error for store {$store->name}: " . $e->getMessage());
         }
     }
 
     /**
-     * Synchronize products from WooCommerce API to the local database.
+     * Synchronize products from WooCommerce API to the local database for a given store.
+     * @param Store $store
+     * @param Client $client
      */
-    public function syncWooCommerceProducts()
+    public function syncWooCommerceProducts(Store $store, Client $client)
     {
-        $storeUrl = config('services.woocommerce.store_url');
-        $client = $this->getWooCommerceClient();
-
-        if (!$client || !$storeUrl) {
-            Log::error('WooCommerce client or store URL is not configured for sync.');
-            return;
-        }
-
-        $store = Store::firstOrCreate(
-            ['store_url' => $storeUrl, 'platform' => 'woocommerce'],
-            ['name' => 'Default WooCommerce Store']
-        );
-
         try {
             $products = $client->get('products');
 
@@ -180,41 +247,27 @@ class SyncService
                 );
             }
 
-            Log::info('WooCommerce products synchronized successfully.');
+            Log::info("WooCommerce products synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error('WooCommerce product sync error: ' . $e->getMessage());
+            Log::error("WooCommerce product sync error for store {$store->name}: " . $e->getMessage());
         }
     }
 
     /**
-     * Synchronize orders from WooCommerce API to the local database.
+     * Synchronize orders from WooCommerce API to the local database for a given store.
+     * @param Store $store
+     * @param Client $client
      */
-    public function syncWooCommerceOrders()
+    public function syncWooCommerceOrders(Store $store, Client $client)
     {
-        Log::debug('Starting WooCommerce order synchronization.');
-        $storeUrl = config('services.woocommerce.store_url');
-        $client = $this->getWooCommerceClient();
-
-        if (!$client || !$storeUrl) {
-            Log::error('WooCommerce client or store URL is not configured for sync.');
-            return;
-        }
-
-        $store = Store::firstOrCreate(
-            ['store_url' => $storeUrl, 'platform' => 'woocommerce'],
-            ['name' => 'Default WooCommerce Store']
-        );
-
         $dateFrom = now()->subDays(30)->toIso8601String();
-        Log::debug("Fetching WooCommerce orders from: {$dateFrom}");
+        Log::debug("Fetching WooCommerce orders for store {$store->name} from: {$dateFrom}");
 
         try {
             $orders = $client->get('orders', ['after' => $dateFrom, 'per_page' => 100]);
-            Log::debug('WooCommerce API response for orders:', ['count' => count($orders), 'data' => $orders]);
 
             foreach ($orders as $orderData) {
-                Log::debug("Processing WooCommerce order: {$orderData->id} - {$orderData->status}");
                 $order = Order::updateOrCreate(
                     [
                         'store_id' => $store->id,
@@ -232,7 +285,7 @@ class SyncService
                     OrderItem::updateOrCreate(
                         [
                             'order_id' => $order->id,
-                            'platform_product_id' => $itemData->id, // Using line item id as unique id
+                            'platform_product_id' => $itemData->id,
                         ],
                         [
                             'product_name' => $itemData->name,
@@ -243,32 +296,30 @@ class SyncService
                 }
             }
 
-            Log::info('WooCommerce orders synchronized successfully.');
+            Log::info("WooCommerce orders synchronized successfully for store: {$store->name}");
 
         } catch (\Exception $e) {
-            Log::error('WooCommerce order sync error: ' . $e->getMessage());
+            Log::error("WooCommerce order sync error for store {$store->name}: " . $e->getMessage());
         }
     }
 
     /**
-     * Get a configured WooCommerce client instance.
+     * Get a configured WooCommerce client instance for a given store.
      *
+     * @param Store $store
      * @return Client|null
      */
-    private function getWooCommerceClient()
+    private function getWooCommerceClient(Store $store)
     {
-        $storeUrl = config('services.woocommerce.store_url');
-        $consumerKey = config('services.woocommerce.consumer_key');
-        $consumerSecret = config('services.woocommerce.consumer_secret');
-
-        if (!$storeUrl || !$consumerKey || !$consumerSecret) {
+        if (!$store->store_url || !$store->api_key || !$store->api_secret) {
+            Log::error("WooCommerce credentials missing for store: {$store->name}");
             return null;
         }
 
         return new Client(
-            $storeUrl,
-            $consumerKey,
-            $consumerSecret,
+            $store->store_url,
+            $store->api_key,
+            $store->api_secret,
             [
                 'version' => 'wc/v3',
                 'timeout' => 30,

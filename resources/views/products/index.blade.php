@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Products</h1>
         <div>
-            <a href="{{ route('products.index') }}" class="btn btn-primary me-2">Sync Products</a>
+            <a href="{{ route('products.sync') }}" class="btn btn-primary me-2">Sync Products</a>
             <a href="{{ route('products.export') }}" class="btn btn-success">Export to CSV</a>
         </div>
     </div>
@@ -24,12 +24,8 @@
                         <input type="text" class="form-control" id="sku" name="sku" value="{{ request('sku') }}" placeholder="SKU">
                     </div>
                     <div class="col-md-4">
-                        <label for="store_platform" class="form-label">Store</label>
-                        <select class="form-select" id="store_platform" name="store_platform">
-                            <option value="">All Stores</option>
-                            <option value="shopify" {{ request('store_platform') == 'shopify' ? 'selected' : '' }}>Shopify</option>
-                            <option value="woocommerce" {{ request('store_platform') == 'woocommerce' ? 'selected' : '' }}>WooCommerce</option>
-                        </select>
+                        <label for="store_name" class="form-label">Store Name</label>
+                        <input type="text" class="form-control" id="store_name" name="store_name" value="{{ request('store_name') }}" placeholder="Store Name">
                     </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">Apply Filters</button>
@@ -65,7 +61,7 @@
                                 </td>
                                 <td>{{ $product->name }}</td>
                                 <td>
-                                    <span class="badge bg-secondary">{{ $product->store->platform }}</span>
+                                    <span class="badge bg-secondary">{{ $product->store->name }}</span>
                                 </td>
                                 <td>{{ $product->sku }}</td>
                                 <td>${{ number_format($product->price, 2) }}</td>

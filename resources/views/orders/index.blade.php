@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Orders</h1>
         <div>
-            <a href="{{ route('orders.index') }}" class="btn btn-primary me-2">Sync Orders</a>
+            <a href="{{ route('orders.sync') }}" class="btn btn-primary me-2">Sync Orders</a>
             <a href="{{ route('orders.export') }}" class="btn btn-success">Export to CSV</a>
         </div>
     </div>
@@ -35,6 +35,10 @@
                                 <option value="{{ $s }}" {{ request('status') == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="store_name" class="form-label">Store Name</label>
+                        <input type="text" class="form-control" id="store_name" name="store_name" value="{{ request('store_name') }}" placeholder="Store Name">
                     </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">Apply Filters</button>
@@ -66,7 +70,7 @@
                                 <td>#{{ $order->platform_order_id }}</td>
                                 <td>{{ $order->customer_name }}</td>
                                 <td>
-                                    <span class="badge bg-secondary">{{ $order->store->platform }}</span>
+                                    <span class="badge bg-secondary">{{ $order->store->name }}</span>
                                 </td>
                                 <td>{{ \Carbon\Carbon::parse($order->order_date)->format('M d, Y') }}</td>
                                 <td><span class="badge bg-info">{{ $order->status }}</span></td>

@@ -24,10 +24,12 @@ Route::middleware('auth')->group(function () {
 
     // Product routes
     Route::get('/products', [WebProductController::class, 'index'])->name('products.index');
+    Route::get('/products/sync', [WebProductController::class, 'sync'])->name('products.sync');
     Route::get('/products/export', [WebProductController::class, 'exportCsv'])->name('products.export');
 
     // Order routes
     Route::get('/orders', [WebOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/sync', [WebOrderController::class, 'sync'])->name('orders.sync');
     Route::get('/orders/export', [WebOrderController::class, 'exportCsv'])->name('orders.export');
 
     // Store routes

@@ -11,17 +11,24 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class OrderController extends Controller
 {
     /**
+     * Synchronize orders from all stores.
+     *
+     * @param SyncService $syncService
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function sync(SyncService $syncService)
+    {
+        $syncService->syncAllOrders();
+        return redirect()->route('orders.index')->with('success', 'Orders are being synchronized.');
+    }
+    /**
      * Display a listing of the resource.
      *
      * @param SyncService $syncService
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request, SyncService $syncService)
+    public function index(Request $request)
     {
-        // Sync orders from all platforms
-        $syncService->syncShopifyOrders();
-        $syncService->syncWooCommerceOrders();
-
         // Fetch all orders from the local database
         $orders = Order::with(['store', 'items']);
 
@@ -42,6 +49,13 @@ class OrderController extends Controller
             $orders->where('status', $request->input('status'));
         }
 
+        if ($request->filled('store_name')) {
+            $storeName = $request->input('store_name');
+            $orders->whereHas('store', function ($query) use ($storeName) {
+                $query->where('name', 'like', '%' . $storeName . '%');
+            });
+        }
+
         $orders = $orders->latest('order_date')->paginate(20)->withQueryString();
 
         // Get distinct statuses for the filter dropdown
@@ -56,12 +70,8 @@ class OrderController extends Controller
      * @param SyncService $syncService
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
-    public function exportCsv(SyncService $syncService)
+    public function exportCsv()
     {
-        // Ensure data is up-to-date before exporting
-        $syncService->syncShopifyOrders();
-        $syncService->syncWooCommerceOrders();
-
         $orders = Order::with(['store', 'items'])->latest('order_date')->get();
 
         $headers = [
@@ -80,7 +90,7 @@ class OrderController extends Controller
                 fputcsv($file, [
                     $order->platform_order_id,
                     $order->customer_name,
-                    $order->store->platform,
+                    $order->store->name, // Changed from platform to name
                     \Carbon\Carbon::parse($order->order_date)->format('Y-m-d H:i:s'),
                     $order->status,
                     $order->total_amount,
