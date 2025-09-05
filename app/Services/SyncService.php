@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Arr;
+use Automattic\WooCommerce\Client;
 
 class SyncService
 {
@@ -39,7 +40,7 @@ class SyncService
             ]);
 
             if ($response->failed()) {
-                Log::error('Shopify API sync failed.', $response->json());
+                Log::error('Shopify API product sync failed.', $response->json());
                 return;
             }
 
@@ -72,6 +73,7 @@ class SyncService
      */
     public function syncShopifyOrders()
     {
+        Log::debug('Starting Shopify order synchronization.');
         $token = config('services.shopify.admin_access_token');
         $storeUrl = config('services.shopify.store_url');
 
@@ -86,6 +88,7 @@ class SyncService
         );
 
         $dateFrom = now()->subDays(30)->toIso8601String();
+        Log::debug("Fetching Shopify orders from: {$dateFrom}");
 
         try {
             $response = Http::withHeaders([
@@ -102,8 +105,10 @@ class SyncService
             }
 
             $orders = $response->json('orders');
+            Log::debug('Shopify API response for orders:', ['count' => count($orders), 'data' => $orders]);
 
             foreach ($orders as $orderData) {
+                Log::debug("Processing Shopify order: {$orderData['id']} - {$orderData['financial_status']}");
                 $order = Order::updateOrCreate(
                     [
                         'store_id' => $store->id,
@@ -138,12 +143,6 @@ class SyncService
             Log::error('Shopify order sync error: ' . $e->getMessage());
         }
     }
-
-    use Automattic\WooCommerce\Client;
-
-class SyncService
-{
-    // ... existing Shopify methods
 
     /**
      * Synchronize products from WooCommerce API to the local database.
@@ -189,36 +188,11 @@ class SyncService
     }
 
     /**
-     * Get a configured WooCommerce client instance.
-     *
-     * @return Client|null
-     */
-    private function getWooCommerceClient()
-    {
-        $storeUrl = config('services.woocommerce.store_url');
-        $consumerKey = config('services.woocommerce.consumer_key');
-        $consumerSecret = config('services.woocommerce.consumer_secret');
-
-        if (!$storeUrl || !$consumerKey || !$consumerSecret) {
-            return null;
-        }
-
-        return new Client(
-            $storeUrl,
-            $consumerKey,
-            $consumerSecret,
-            [
-                'version' => 'wc/v3',
-                'timeout' => 30,
-            ]
-        );
-    }
-
-    /**
      * Synchronize orders from WooCommerce API to the local database.
      */
     public function syncWooCommerceOrders()
     {
+        Log::debug('Starting WooCommerce order synchronization.');
         $storeUrl = config('services.woocommerce.store_url');
         $client = $this->getWooCommerceClient();
 
@@ -233,11 +207,14 @@ class SyncService
         );
 
         $dateFrom = now()->subDays(30)->toIso8601String();
+        Log::debug("Fetching WooCommerce orders from: {$dateFrom}");
 
         try {
             $orders = $client->get('orders', ['after' => $dateFrom, 'per_page' => 100]);
+            Log::debug('WooCommerce API response for orders:', ['count' => count($orders), 'data' => $orders]);
 
             foreach ($orders as $orderData) {
+                Log::debug("Processing WooCommerce order: {$orderData->id} - {$orderData->status}");
                 $order = Order::updateOrCreate(
                     [
                         'store_id' => $store->id,
@@ -278,4 +255,24 @@ class SyncService
      *
      * @return Client|null
      */
+    private function getWooCommerceClient()
+    {
+        $storeUrl = config('services.woocommerce.store_url');
+        $consumerKey = config('services.woocommerce.consumer_key');
+        $consumerSecret = config('services.woocommerce.consumer_secret');
+
+        if (!$storeUrl || !$consumerKey || !$consumerSecret) {
+            return null;
+        }
+
+        return new Client(
+            $storeUrl,
+            $consumerKey,
+            $consumerSecret,
+            [
+                'version' => 'wc/v3',
+                'timeout' => 30,
+            ]
+        );
+    }
 }
