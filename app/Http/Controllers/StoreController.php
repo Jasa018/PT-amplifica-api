@@ -26,7 +26,7 @@ class StoreController extends Controller
      */
     public function index()
     {
-        return Store::all();
+        return Store::withTrashed()->get();
     }
 
     /**
@@ -52,13 +52,14 @@ class StoreController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'platform' => 'required|string',
+            'platform' => ['required', 'in:shopify,woocommerce'],
             'store_url' => 'required|url',
-            'api_key' => 'nullable|string',
-            'api_secret' => 'nullable|string',
-            'access_token' => 'nullable|string',
+            'name' => 'required|string|max:255',
+            'api_key' => 'required|string',
+            'api_secret' => 'required|string',
+            'access_token' => 'required_if:platform,shopify|nullable|string',
         ]);
 
         return Store::create($request->all());
@@ -127,13 +128,14 @@ class StoreController extends Controller
      */
     public function update(Request $request, Store $store)
     {
-        $request->validate([
+        $validated = $request->validate([
             'user_id' => 'sometimes|required|exists:users,id',
-            'platform' => 'sometimes|required|string',
+            'platform' => ['sometimes', 'required', 'in:shopify,woocommerce'],
             'store_url' => 'sometimes|required|url',
-            'api_key' => 'nullable|string',
-            'api_secret' => 'nullable|string',
-            'access_token' => 'nullable|string',
+            'name' => 'sometimes|required|string|max:255',
+            'api_key' => 'required|string',
+            'api_secret' => 'required|string',
+            'access_token' => 'required_if:platform,shopify|nullable|string',
         ]);
 
         $store->update($request->all());

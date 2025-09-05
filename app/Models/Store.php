@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Annotations as OA;
 
 /**
@@ -50,6 +51,17 @@ use OpenApi\Annotations as OA;
  *         description="Access Token for the store (sensitive, handle with care)"
  *     ),
  *     @OA\Property(
+ *         property="is_deleted",
+ *         type="boolean",
+ *         description="Flag indicating if the store is soft deleted"
+ *     ),
+ *     @OA\Property(
+ *         property="deleted_at",
+ *         type="string",
+ *         format="date-time",
+ *         description="Timestamp of soft deletion"
+ *     ),
+ *     @OA\Property(
  *         property="created_at",
  *         type="string",
  *         format="date-time",
@@ -65,16 +77,27 @@ use OpenApi\Annotations as OA;
  */
 class Store extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
         'platform',
         'store_url',
+        'name',
         'api_key',
         'api_secret',
         'access_token',
     ];
+
+    protected $dates = ['deleted_at'];
+
+    public function delete()
+    {
+        $this->is_deleted = true;
+        $this->save();
+
+        return parent::delete();
+    }
 
     public function user()
     {

@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ProductController as WebProductController;
 use App\Http\Controllers\Web\OrderController as WebOrderController;
 use App\Http\Controllers\Web\AuthController as WebAuthController;
+use App\Http\Controllers\Web\StoreController as WebStoreController;
 
 // Redirect root to login
 Route::get('/', function () {
@@ -28,4 +29,7 @@ Route::middleware('auth')->group(function () {
     // Order routes
     Route::get('/orders', [WebOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/export', [WebOrderController::class, 'exportCsv'])->name('orders.export');
+
+    // Store routes
+    Route::resource('stores', WebStoreController::class);
 });
