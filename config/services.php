@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'shopify' => [
+        'api_key' => env('SHOPIFY_API_KEY'),
+        'api_secret' => env('SHOPIFY_API_SECRET'),
+        'webhook_secret' => env('SHOPIFY_WEBHOOK_SECRET'),
+        'admin_access_token' => env('SHOPIFY_ADMIN_ACCESS_TOKEN'),
+        'store_url' => env('SHOPIFY_STORE_URL'),
+    ],
+
+    'woocommerce' => [
+        'store_url' => env('WOOCOMMERCE_STORE_URL'),
+        'consumer_key' => env('WOOCOMMERCE_CONSUMER_KEY'),
+        'consumer_secret' => env('WOOCOMMERCE_CONSUMER_SECRET'),
+    ],
+
 ];
