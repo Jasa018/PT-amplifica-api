@@ -10,6 +10,36 @@
         </div>
     </div>
 
+    <div class="card mb-4">
+        <div class="card-header">Filter Products</div>
+        <div class="card-body">
+            <form method="GET" action="{{ route('products.index') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="name" class="form-label">Product Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ request('name') }}" placeholder="Product Name">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="sku" class="form-label">SKU</label>
+                        <input type="text" class="form-control" id="sku" name="sku" value="{{ request('sku') }}" placeholder="SKU">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="store_platform" class="form-label">Store</label>
+                        <select class="form-select" id="store_platform" name="store_platform">
+                            <option value="">All Stores</option>
+                            <option value="shopify" {{ request('store_platform') == 'shopify' ? 'selected' : '' }}>Shopify</option>
+                            <option value="woocommerce" {{ request('store_platform') == 'woocommerce' ? 'selected' : '' }}>WooCommerce</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        <a href="{{ route('products.index') }}" class="btn btn-secondary">Clear Filters</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">

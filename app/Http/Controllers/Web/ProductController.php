@@ -16,14 +16,32 @@ class ProductController extends Controller
      * @param SyncService $syncService
      * @return \Illuminate\Http\Response
      */
-    public function index(SyncService $syncService)
+    public function index(Request $request, SyncService $syncService)
     {
         // Sync products from all platforms
         $syncService->syncShopifyProducts();
         $syncService->syncWooCommerceProducts();
 
         // Fetch all products from the local database
-        $products = Product::with('store')->latest()->paginate(20);
+        $products = Product::with('store');
+
+        // Apply filters
+        if ($request->filled('name')) {
+            $products->where('name', 'like', '%' . $request->input('name') . '%');
+        }
+
+        if ($request->filled('sku')) {
+            $products->where('sku', 'like', '%' . $request->input('sku') . '%');
+        }
+
+        if ($request->filled('store_platform')) {
+            $platform = $request->input('store_platform');
+            $products->whereHas('store', function ($query) use ($platform) {
+                $query->where('platform', $platform);
+            });
+        }
+
+        $products = $products->latest()->paginate(20)->withQueryString();
 
         return view('products.index', compact('products'));
     }

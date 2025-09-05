@@ -16,16 +16,38 @@ class OrderController extends Controller
      * @param SyncService $syncService
      * @return \Illuminate\Http\Response
      */
-    public function index(SyncService $syncService)
+    public function index(Request $request, SyncService $syncService)
     {
         // Sync orders from all platforms
         $syncService->syncShopifyOrders();
         $syncService->syncWooCommerceOrders();
 
         // Fetch all orders from the local database
-        $orders = Order::with(['store', 'items'])->latest('order_date')->paginate(20);
+        $orders = Order::with(['store', 'items']);
 
-        return view('orders.index', compact('orders'));
+        // Apply filters
+        if ($request->filled('start_date')) {
+            $orders->whereDate('order_date', '>=', $request->input('start_date'));
+        }
+
+        if ($request->filled('end_date')) {
+            $orders->whereDate('order_date', '<=', $request->input('end_date'));
+        }
+
+        if ($request->filled('customer_name')) {
+            $orders->where('customer_name', 'like', '%' . $request->input('customer_name') . '%');
+        }
+
+        if ($request->filled('status')) {
+            $orders->where('status', $request->input('status'));
+        }
+
+        $orders = $orders->latest('order_date')->paginate(20)->withQueryString();
+
+        // Get distinct statuses for the filter dropdown
+        $statuses = Order::distinct()->pluck('status')->sort()->toArray();
+
+        return view('orders.index', compact('orders', 'statuses'));
     }
 
     /**
