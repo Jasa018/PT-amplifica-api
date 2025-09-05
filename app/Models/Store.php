@@ -91,14 +91,6 @@ class Store extends Model
 
     protected $dates = ['deleted_at'];
 
-    public function delete()
-    {
-        $this->is_deleted = true;
-        $this->save();
-
-        return parent::delete();
-    }
-
     public function user()
     {
         return $this->belongsTo(User::class);

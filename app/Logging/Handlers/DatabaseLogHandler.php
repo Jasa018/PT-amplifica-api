@@ -5,9 +5,15 @@ namespace App\Logging\Handlers;
 use App\Models\Log as LogModel;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\LogRecord;
+use Monolog\Level;
 
 class DatabaseLogHandler extends AbstractProcessingHandler
 {
+    public function __construct($level = Level::Debug, bool $bubble = true)
+    {
+        parent::__construct($level, $bubble);
+    }
+
     /**
      * @param array $record
      */

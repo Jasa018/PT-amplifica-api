@@ -53,16 +53,15 @@ class StoreController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
             'platform' => ['required', 'in:shopify,woocommerce'],
             'store_url' => 'required|url',
             'name' => 'required|string|max:255',
-            'api_key' => 'required|string',
-            'api_secret' => 'required|string',
-            'access_token' => 'required_if:platform,shopify|nullable|string',
+            'api_key' => 'nullable|string|required_if:platform,woocommerce',
+            'api_secret' => 'nullable|string|required_if:platform,woocommerce',
+            'access_token' => 'nullable|string|required_if:platform,shopify',
         ]);
 
-        return Store::create($request->all());
+        return Store::create(array_merge($validated, ['user_id' => auth()->id()]));
     }
 
     /**
@@ -129,13 +128,13 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $validated = $request->validate([
-            'user_id' => 'sometimes|required|exists:users,id',
-            'platform' => ['sometimes', 'required', 'in:shopify,woocommerce'],
-            'store_url' => 'sometimes|required|url',
-            'name' => 'sometimes|required|string|max:255',
-            'api_key' => 'required|string',
-            'api_secret' => 'required|string',
-            'access_token' => 'required_if:platform,shopify|nullable|string',
+            'user_id' => 'sometimes|exists:users,id',
+            'platform' => ['sometimes', 'in:shopify,woocommerce'],
+            'store_url' => 'sometimes|url',
+            'name' => 'sometimes|string|max:255',
+            'api_key' => 'sometimes|nullable|string|required_if:platform,woocommerce',
+            'api_secret' => 'sometimes|nullable|string|required_if:platform,woocommerce',
+            'access_token' => 'sometimes|nullable|string|required_if:platform,shopify',
         ]);
 
         $store->update($request->all());

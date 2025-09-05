@@ -4,6 +4,7 @@ namespace App\Logging;
 
 use App\Logging\Handlers\DatabaseLogHandler;
 use Monolog\Logger;
+use Monolog\Level;
 
 class DatabaseLogger
 {
@@ -16,7 +17,7 @@ class DatabaseLogger
     public function __invoke(array $config)
     {
         $logger = new Logger('database');
-        $logger->pushHandler(new DatabaseLogHandler());
+        $logger->pushHandler(new DatabaseLogHandler(Level::fromName($config['level'] ?? 'debug')));
         return $logger;
     }
 }
