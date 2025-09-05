@@ -32,6 +32,9 @@
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('stores.index') ? 'active' : '' }}" href="{{ route('stores.index') }}">Stores</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('analytics.index') ? 'active' : '' }}" href="{{ route('analytics.index') }}">Analytics</a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">

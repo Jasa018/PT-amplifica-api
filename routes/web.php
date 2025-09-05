@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\ProductController as WebProductController;
 use App\Http\Controllers\Web\OrderController as WebOrderController;
 use App\Http\Controllers\Web\AuthController as WebAuthController;
 use App\Http\Controllers\Web\StoreController as WebStoreController;
+use App\Http\Controllers\Web\AnalyticsController;
 
 // Redirect root to login
 Route::get('/', function () {
@@ -21,6 +22,7 @@ Route::post('logout', [WebAuthController::class, 'logout'])->name('logout');
 // Protected routes
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
 
     // Product routes
     Route::get('/products', [WebProductController::class, 'index'])->name('products.index');
