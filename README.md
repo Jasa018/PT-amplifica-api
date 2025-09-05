@@ -23,11 +23,11 @@ Esta aplicación es una API desarrollada en Laravel que se conecta a tiendas de 
     Asegúrate de llenar las variables de entorno como se describe en la sección de "Configuración".
 
 3.  **Levantar los Contenedores**
-    Este proyecto usa Laravel Sail (Docker). Para iniciar los servicios (aplicación, base de datos), ejecuta:
+    Este proyecto usa Docker. Para iniciar los servicios (aplicación, base de datos), ejecuta:
     ```bash
-    ./vendor/bin/sail up -d
+    docker-compose up -d
     ```
-    *(Si estás en Windows y no usas WSL, puedes usar `docker-compose up -d`)*
+    *(Alternativamente, si tienes Laravel Sail configurado, puedes usar `./vendor/bin/sail up -d`)*
 
 4.  **Instalar Dependencias**
     Instala las dependencias de PHP a través de Composer.
@@ -41,7 +41,18 @@ Esta aplicación es una API desarrollada en Laravel que se conecta a tiendas de 
     docker-compose exec laravel.test php artisan migrate
     ```
 
-6.  **Limpiar Caché (Importante)**
+6.  **Crear Usuario para Pruebas**
+    Para poder iniciar sesión en la aplicación, necesitas crear un usuario. Puedes hacerlo usando Artisan Tinker:
+    ```bash
+    docker-compose exec laravel.test php artisan tinker
+    ```
+    Una vez dentro de Tinker, ejecuta el siguiente comando para crear un usuario de prueba (puedes cambiar el email y la contraseña):
+    ```php
+    App\Models\User::factory()->create(['email' => 'test@example.com', 'password' => bcrypt('password')]);
+    ```
+    Luego, escribe `exit` para salir de Tinker.
+
+7.  **Limpiar Caché (Importante)**
     Después de configurar tus variables de entorno, limpia la caché de configuración para que la aplicación las cargue correctamente.
     ```bash
     docker-compose exec laravel.test php artisan config:clear
