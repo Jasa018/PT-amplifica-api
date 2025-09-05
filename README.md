@@ -91,6 +91,48 @@ docker-compose exec laravel.test php artisan l5-swagger:generate
 Una vez generada y con el servidor en marcha, puedes acceder a la documentación interactiva en la siguiente URL:
 [http://localhost/api/documentation](http://localhost/api/documentation)
 
+## Pruebas Unitarias y de Integración
+
+El proyecto utiliza PHPUnit para las pruebas. Puedes ejecutar todas las pruebas (unitarias y de integración) con el siguiente comando:
+
+```bash
+docker-compose exec laravel.test php artisan test
+```
+
+Las pruebas unitarias se encuentran en `tests/Unit` y se enfocan en componentes individuales de la aplicación. Las pruebas de integración se encuentran en `tests/Feature` y verifican la interacción entre diferentes partes del sistema, incluyendo las rutas de la API y la base de datos.
+
+## Base de Datos
+
+La base de datos de la aplicación está compuesta por las siguientes tablas principales:
+
+-   `users`: Almacena la información de los usuarios del sistema para autenticación.
+-   `stores`: Contiene los detalles de las tiendas de e-commerce (Shopify, WooCommerce) conectadas a la API.
+-   `products`: Guarda los productos obtenidos de las tiendas de e-commerce.
+-   `orders`: Almacena los pedidos de las tiendas de e-commerce.
+-   `order_items`: Detalla los productos individuales dentro de cada pedido.
+-   `logs`: Registra eventos y errores de la aplicación, con niveles de `info`, `warning` y `error`.
+-   `personal_access_tokens`: Utilizada por Laravel Sanctum para la autenticación de la API.
+-   `cache`: Tabla de caché de Laravel.
+-   `jobs`: Tabla para la gestión de colas de tareas de Laravel.
+
+## Flujo del Sistema
+
+### Stores (Tiendas)
+
+El sistema permite la gestión de diferentes tiendas de e-commerce. Cada `Store` se configura con las credenciales de Shopify o WooCommerce, lo que habilita la sincronización de datos. Las tiendas son la entidad central para agrupar productos y pedidos.
+
+### Products (Productos)
+
+Los productos son obtenidos de las tiendas de e-commerce configuradas. La API puede sincronizar y almacenar información detallada de los productos, permitiendo su consulta y exportación. Esto incluye datos como nombre, descripción, precio, etc.
+
+### Orders (Pedidos)
+
+Los pedidos son sincronizados desde las tiendas de e-commerce. Cada `Order` incluye `OrderItems` que representan los productos individuales dentro de ese pedido. La API permite consultar y exportar los pedidos para análisis.
+
+### Analytics (Análisis)
+
+La sección de `Analytics` proporciona una visión consolidada de los datos de productos y pedidos. Permite a los usuarios obtener métricas y reportes sobre el rendimiento de sus tiendas, como ventas, productos más vendidos, etc., basándose en la información sincronizada en la base de datos.
+
 ## API Endpoints
 
 A continuación se listan los endpoints disponibles en la API.
