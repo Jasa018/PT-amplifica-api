@@ -22,6 +22,13 @@ Esta aplicación es una API desarrollada en Laravel que se conecta a tiendas de 
     ```
     Asegúrate de llenar las variables de entorno como se describe en la sección de "Configuración".
 
+** NOTA FUERA DE TIEMPO
+Se actualiza el archivo .env.example, puse variables que faltan para que corra sin problemas.
+
+Se necesita la carpeta vendor para levantar los contenedores de docker, ocupar el comando (en el caso que no se tenga composer):
+    docker run --rm -v "${pwd}:/app" -w /app laravelsail/php83-composer:latest composer install
+**
+
 3.  **Levantar los Contenedores**
     Este proyecto usa Docker. Para iniciar los servicios (aplicación, base de datos), ejecuta:
     ```bash
