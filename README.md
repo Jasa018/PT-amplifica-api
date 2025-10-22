@@ -9,6 +9,34 @@ Esta aplicación es una API desarrollada en Laravel que se conecta a tiendas de 
 
 ## Instalación y Puesta en Marcha
 
+### Instalación Automatizada (Windows - Recomendado)
+
+Para simplificar el proceso de instalación en Windows, se ha creado un script `setup.bat` que automatiza todos los pasos necesarios.
+
+**Pasos:**
+
+1.  **Asegrate de que Docker Desktop este en ejecucion.**
+2.  Abre una terminal (se recomienda PowerShell) en la raz del proyecto.
+3.  Ejecuta el siguiente comando:
+    ```powershell
+    .\setup.bat
+    ```
+
+El script se encargar de:
+- Copiar el archivo de entorno `.env`.
+- Instalar las dependencias de Composer.
+- Levantar los contenedores de Docker.
+- Esperar a que la base de datos se inicie.
+- Ejecutar las migraciones.
+- Limpiar la cach de configuracin.
+- Crear un usuario de prueba (`test@example.com`, contrasea: `password`).
+
+Una vez finalizado, la aplicacin estar disponible en `http://localhost`.
+
+---
+
+### Instalación Manual
+
 1.  **Clonar el Repositorio**
     ```bash
     git clone <url-del-repositorio>
